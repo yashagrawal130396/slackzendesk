@@ -35,7 +35,7 @@ function doPost(e) {
     }
     
     // Zendesk ticket creation with the data sent by slack ping along with the eventts and channel so that to & fro communication can be done using this on slack again.
-    var zen_create_url = 'https://headout.zendesk.com/api/v2/tickets.json';
+    var zen_create_url = 'https://subdomain.zendesk.com/api/v2/tickets.json';
     var zen_create = {
     "ticket": {
         "subject": "New slot closure request",
@@ -63,7 +63,7 @@ function doPost(e) {
       'token':'xoxb-2316821691-987143998967-ozSTRQJZfbWG81IQlmrgQPa1',
       'channel': channel,
       'thread_ts': eventts,
-      'text': 'Ticket created successfully <https://headout.zendesk.com/agent/tickets/'+ticket_id+'|Ticket #'+ticket_id+'>',
+      'text': 'Ticket created successfully <https://subdomain.zendesk.com/agent/tickets/'+ticket_id+'|Ticket #'+ticket_id+'>',
       'username':'Ping Bot',
       'icon_emoji':':robot_face:'
     }
@@ -86,7 +86,7 @@ function doPost(e) {
     else if(check.indexOf('thread_ts') > -1) {
       var threadts = data.event.thread_ts;
       var update_text = data.event.text;
-      var external_id_url = 'https://headout.zendesk.com/api/v2/tickets.json?external_id=' + threadts;
+      var external_id_url = 'https://subdomain.zendesk.com/api/v2/tickets.json?external_id=' + threadts;
       var external_id_options = {
         "method": "GET",
         "contentType":"application/json",
@@ -95,7 +95,7 @@ function doPost(e) {
       var external_res = JSON.parse(UrlFetchApp.fetch(external_id_url, external_id_options));
       var external_ticket_id = external_res.tickets[0].id;
       
-      var update_ticket_url = 'https://headout.zendesk.com/api/v2/tickets/' +external_ticket_id + '.json';
+      var update_ticket_url = 'https://subdomain.zendesk.com/api/v2/tickets/' +external_ticket_id + '.json';
       var zen_update = {
         "ticket": {
         "comment": {
