@@ -4,12 +4,13 @@
 function doPost(e) {
   // Fetching data sent by slack app on app mention event.
   var data = JSON.parse(e.postData.contents);
+  var check = JSON.stringify(data.event);
   var zen_header = {'Content-Type': 'application/json',
-                    "Authorization" : "Basic YOUR_ZENDESK_AUTHORIZATION_TOKEN",            
+                    "Authorization" : "Basic YOUR_ZENDESK_AUTH_TOKEN",            
                    };
   
   // Specifying event type (Used in case where app has other events as well)
-  if(data.event.type == 'app_mention') {
+  if(data.event.type == 'app_mention' && check.indexOf('thread_ts') < 0) {
     var eventts = data.event.event_ts;
     var channel = data.event.channel;
     var user = data.event.user;
@@ -19,7 +20,7 @@ function doPost(e) {
     // Accessing slack user list to fetch email id of the user who mentioned the app.
     var user_url = 	'https://slack.com/api/users.list';
     var user_payload = {
-      'token':'YOUR_SLACK_ADMIN_AUTHORIZATION_TOKEN'
+      'token':'SLACK_ADMIN_TOKEN'
     };
     var user_options = {
       'method':'get',
@@ -38,11 +39,11 @@ function doPost(e) {
     var zen_create_url = 'https://subdomain.zendesk.com/api/v2/tickets.json';
     var zen_create = {
       "ticket": {
-        "subject": "New slot closure request",
+        "subject": "New Fin Clarification Request",
         "comment": {
           "html_body": ping_text
         },
-        "tags": ["slot_closure"],
+        "tags": ["fin_clarification"],
         "requester": user_email,
         "custom_fields": [{ "id": 360021471852, "value": eventts },{ "id": 360021472412, "value": channel }],
         "external_id": eventts
@@ -60,11 +61,11 @@ function doPost(e) {
     
     // As soon as ticket is created, pasting a msg on the same slack thread along with the the ticket url.
     var first_msg_payload = {
-      'token':'YOUR_SLACK_BOT_TOKEN_TO_PASTE_MSG_SLACK_THREAD',
+      'token':'SLACK_APP_BOT_TOKEN',
       'channel': channel,
       'thread_ts': eventts,
       'text': 'Ticket created successfully <https://subdomain.zendesk.com/agent/tickets/'+ticket_id+'|Ticket #'+ticket_id+'>',
-      'username':'Ping Bot',
+      'username':'Fin Clarification',
       'icon_emoji':':robot_face:'
     }
     var first_msg_url = 'https://slack.com/api/chat.postMessage';
@@ -77,41 +78,34 @@ function doPost(e) {
     
   }
   // Further sending msgs of the same slack thread to the same zendesk ticket
-  else if(data.event.type == 'message') {
-    var check = JSON.stringify(data.event);
-    if(check.indexOf('bot_id') > -1 || check.indexOf('bot_profile') > -1) {
-      return ;
-    }
-    // Using the threadts to identify the zendesk ticket by using external id which was setup while ticket creation namely eventts
-    else if(check.indexOf('thread_ts') > -1) {
-      var threadts = data.event.thread_ts;
-      var update_text = data.event.text;
-      var external_id_url = 'https://subdomain.zendesk.com/api/v2/tickets.json?external_id=' + threadts;
-      var external_id_options = {
-        "method": "GET",
-        "contentType":"application/json",
-        "headers" : zen_header
-      };
-      var external_res = JSON.parse(UrlFetchApp.fetch(external_id_url, external_id_options));
-      var external_ticket_id = external_res.tickets[0].id;
-      
-      var update_ticket_url = 'https://subdomain.zendesk.com/api/v2/tickets/' +external_ticket_id + '.json';
-      var zen_update = {
-        "ticket": {
-          "comment": {
-            "html_body": update_text
-          }
+  // Using the threadts to identify the zendesk ticket by using external id which was setup while ticket creation namely eventts
+  else if(data.event.type == 'app_mention' && check.indexOf('thread_ts') > -1) {
+    var threadts = data.event.thread_ts;
+    var update_text = data.event.text;
+    var external_id_url = 'https://subdomain.zendesk.com/api/v2/tickets.json?external_id=' + threadts;
+    var external_id_options = {
+      "method": "GET",
+      "contentType":"application/json",
+      "headers" : zen_header
+    };
+    var external_res = JSON.parse(UrlFetchApp.fetch(external_id_url, external_id_options));
+    var external_ticket_id = external_res.tickets[0].id;
+    
+    var update_ticket_url = 'https://subdomain.zendesk.com/api/v2/tickets/' +external_ticket_id + '.json';
+    var zen_update = {
+      "ticket": {
+        "comment": {
+          "html_body": update_text
         }
-      };
-      var update_ticket_options = {
-        "method": "PUT",
-        "contentType":"application/json",
-        "headers" : zen_header,
-        "payload" : JSON.stringify(zen_update)
-      };
-      var update_res = UrlFetchApp.fetch(update_ticket_url, update_ticket_options);
-    }
-    else { return; }
+      }
+    };
+    var update_ticket_options = {
+      "method": "PUT",
+      "contentType":"application/json",
+      "headers" : zen_header,
+      "payload" : JSON.stringify(zen_update)
+    };
+    var update_res = UrlFetchApp.fetch(update_ticket_url, update_ticket_options);
   }
   else { return; }
   return ;
